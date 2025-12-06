@@ -1,0 +1,7 @@
+{
+  "name": "StudyGenius AI",
+  "description": "A free, all-in-one AI study assistant with doubt solving, notes generation, flashcards, tutors, and focus tools.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
