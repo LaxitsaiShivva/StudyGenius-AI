@@ -4,9 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>StudyGenius AI</title>
-    <!-- CRITICAL: Polyfill for process.env must run before ANY other script to prevent blank page crashes on static hosts like GitHub Pages -->
+    <!-- CRITICAL: Polyfills for browser compatibility -->
     <script>
       window.process = { env: { API_KEY: '' } };
+      window.global = window;
     </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -89,7 +90,7 @@
     "react": "https://aistudiocdn.com/react@^19.2.1",
     "react-dom/client": "https://aistudiocdn.com/react-dom@^19.2.1/client",
     "@google/genai": "https://aistudiocdn.com/@google/genai@^1.31.0",
-    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.39.3",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.45.1?bundle",
     "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.1/",
     "react/": "https://aistudiocdn.com/react@^19.2.1/"
   }

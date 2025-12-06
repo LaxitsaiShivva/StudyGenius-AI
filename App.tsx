@@ -1651,8 +1651,7 @@ const TutorChat = () => {
     setInput('');
     setLoading(true);
 
-    const context = `System: ${selectedPersona.systemInstruction}\n\nUser: ${input}`;
-    const reply = await GeminiService.generateTextResponse(context);
+    const reply = await GeminiService.generateTextResponse(input, selectedPersona.systemInstruction);
     
     const botMsg: ChatMessage = { id: (Date.now()+1).toString(), role: 'model', text: reply, timestamp: Date.now() };
     setMessages(prev => [...prev, botMsg]);
@@ -1679,7 +1678,7 @@ const TutorChat = () => {
             <span className="text-4xl bg-gray-50 dark:bg-gray-800 p-3 rounded-2xl shadow-inner">{t.emoji}</span>
             <div>
               <h3 className="font-bold text-lg dark:text-white">{t.name}</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">{t.role}</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{t.role}</p>
             </div>
           </div>
         ))}
@@ -1688,442 +1687,180 @@ const TutorChat = () => {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-80px)] animate-fade-in relative">
-      <div className="p-4 bg-white/80 dark:bg-darkBg/80 backdrop-blur-md flex justify-between items-center sticky top-0 border-b border-gray-100 dark:border-gray-800 z-10">
-        <div className="flex items-center gap-3">
-           <span className="text-2xl">{selectedPersona.emoji}</span>
-           <span className="font-bold dark:text-white text-lg">{selectedPersona.name}</span>
+    <div className="flex flex-col h-[85vh] p-4 pb-24 animate-slide-up">
+      <div className="flex items-center gap-3 mb-4 bg-white dark:bg-cardDark p-3 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+        <button onClick={() => setSelectedPersona(null)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"><Icons.X /></button>
+        <span className="text-2xl">{selectedPersona.emoji}</span>
+        <div>
+           <h3 className="font-bold dark:text-white">{selectedPersona.name}</h3>
+           <p className="text-xs text-gray-500">{selectedPersona.role}</p>
         </div>
-        <button onClick={() => setSelectedPersona(null)} className="text-xs font-bold text-gray-500 hover:text-primary dark:text-gray-400 transition-colors px-3 py-1">Switch</button>
       </div>
-      <div className="flex-1 overflow-y-auto p-4 space-y-6 pb-28" ref={scrollRef}>
+      
+      <div ref={scrollRef} className="flex-1 overflow-y-auto space-y-4 mb-4">
         {messages.map(m => (
-          <div key={m.id} className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'} gap-1`}>
-            <div className={`max-w-[85%] p-4 rounded-2xl shadow-sm text-sm leading-relaxed ${m.role === 'user' ? 'bg-primary text-white rounded-br-sm' : 'bg-white dark:bg-cardDark dark:text-white rounded-bl-sm border border-gray-100 dark:border-gray-700'}`}>
-              {m.text}
-            </div>
-            {m.role === 'model' && (
-              <button 
-                onClick={() => saveMessage(m.text)}
-                className="text-xs text-gray-400 hover:text-primary flex items-center gap-1 ml-2 transition-colors"
-              >
-                <Icons.Save /> Save
-              </button>
-            )}
-          </div>
+           <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div className={`max-w-[85%] p-4 rounded-2xl text-sm ${m.role === 'user' ? 'bg-indigo-600 text-white rounded-br-none' : 'bg-white dark:bg-cardDark dark:text-gray-200 shadow-sm border border-gray-100 dark:border-gray-700 rounded-bl-none'}`}>
+                 {m.text}
+                 {m.role === 'model' && <button onClick={() => saveMessage(m.text)} className="block mt-2 text-[10px] opacity-50 hover:opacity-100 uppercase font-bold tracking-wide">Save Advice</button>}
+              </div>
+           </div>
         ))}
-        {loading && (
-          <div className="flex justify-start">
-             <div className="bg-white dark:bg-cardDark p-4 rounded-2xl rounded-bl-sm shadow-sm flex gap-1.5 border border-gray-100 dark:border-gray-700">
-               <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"></div>
-               <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce delay-100"></div>
-               <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce delay-200"></div>
-             </div>
-          </div>
-        )}
+        {loading && <div className="text-xs text-gray-400 ml-4">{selectedPersona.name} is typing...</div>}
       </div>
-      <div className="absolute bottom-24 left-0 right-0 p-4 bg-gradient-to-t from-white via-white to-transparent dark:from-darkBg dark:via-darkBg">
-        <div className="flex gap-2 max-w-md mx-auto glass-panel p-1.5 rounded-full shadow-lg">
-          <input 
-            value={input} 
-            onChange={e => setInput(e.target.value)} 
+
+      <div className="flex gap-2">
+         <input 
+            value={input}
+            onChange={e => setInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && send()}
             placeholder={`Ask ${selectedPersona.name}...`} 
-            className="flex-1 p-3 ml-2 bg-transparent outline-none dark:text-white" 
-          />
-          <button onClick={send} className="bg-primary text-white p-3 rounded-full shadow-lg hover:bg-indigo-600 transition-colors"><Icons.Send /></button>
-        </div>
+            className="flex-1 bg-white dark:bg-cardDark p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 outline-none dark:text-white"
+         />
+         <button onClick={send} disabled={loading} className="bg-indigo-600 text-white p-4 rounded-2xl shadow-lg shadow-indigo-500/30">
+            <Icons.Send />
+         </button>
       </div>
     </div>
   );
 };
 
-const Timer = () => {
-  const [timeLeft, setTimeLeft] = useState(25 * 60);
-  const [isActive, setIsActive] = useState(false);
-  const [mode, setMode] = useState<'focus' | 'break'>('focus');
+const SavedView = () => {
+    const [items, setItems] = useState<SavedItem[]>([]);
+    
+    useEffect(() => {
+        StorageService.fetchLibraryItems().then(setItems);
+    }, []);
 
-  useEffect(() => {
-    let interval: any = null;
-    if (isActive && timeLeft > 0) {
-      interval = setInterval(() => setTimeLeft(timeLeft - 1), 1000);
-    } else if (timeLeft === 0) {
-      setIsActive(false);
-    }
-    return () => clearInterval(interval);
-  }, [isActive, timeLeft]);
-
-  const toggleTimer = () => setIsActive(!isActive);
-  const resetTimer = () => {
-    setIsActive(false);
-    setTimeLeft(mode === 'focus' ? 25 * 60 : 5 * 60);
-  };
-  const switchMode = () => {
-    const newMode = mode === 'focus' ? 'break' : 'focus';
-    setMode(newMode);
-    setTimeLeft(newMode === 'focus' ? 25 * 60 : 5 * 60);
-    setIsActive(false);
-  };
-
-  const formatTime = (seconds: number) => {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m}:${s < 10 ? '0' : ''}${s}`;
-  };
-
-  return (
-    <div className="p-6 pb-28 flex flex-col items-center justify-center min-h-[60vh] animate-slide-up">
-      <div className="mb-10 text-center">
-        <h2 className="text-3xl font-bold dark:text-white capitalize mb-2">{mode} Mode</h2>
-        <p className="text-gray-500 dark:text-gray-400 text-sm italic max-w-xs mx-auto">
-          {mode === 'break' ? MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)] : "Focus on being productive instead of busy."}
-        </p>
-      </div>
-      
-      <div className="w-64 h-64 rounded-full border-[6px] border-white dark:border-gray-700 shadow-2xl flex items-center justify-center relative mb-12 bg-gray-50 dark:bg-gray-800/50">
-        <div className={`absolute inset-0 rounded-full border-[6px] border-primary opacity-20 ${isActive ? 'animate-pulse-slow' : ''}`}></div>
-        <span className="text-6xl font-mono font-bold text-gray-800 dark:text-white tracking-tighter">{formatTime(timeLeft)}</span>
-      </div>
-
-      <div className="flex gap-4 w-full justify-center">
-        <button onClick={toggleTimer} className={`px-8 py-4 rounded-2xl font-bold shadow-lg hover:-translate-y-1 transition-all flex-1 max-w-[140px] ${isActive ? 'bg-accent text-white' : 'bg-primary text-white'}`}>
-          {isActive ? 'Pause' : 'Start'}
-        </button>
-        <button onClick={resetTimer} className="bg-white dark:bg-cardDark text-gray-700 dark:text-gray-300 px-8 py-4 rounded-2xl font-bold shadow-md hover:-translate-y-1 transition-all flex-1 max-w-[140px] border border-gray-100 dark:border-gray-700">
-          Reset
-        </button>
-      </div>
-      <button onClick={switchMode} className="mt-8 text-indigo-500 dark:text-indigo-400 text-xs font-bold uppercase tracking-widest hover:underline opacity-80">
-        Switch to {mode === 'focus' ? 'Break' : 'Focus'}
-      </button>
-    </div>
-  );
-};
-
-const VoiceQA = () => {
-  const [status, setStatus] = useState<'idle' | 'listening' | 'processing' | 'speaking'>('idle');
-  const [transcript, setTranscript] = useState('');
-  const [answer, setAnswer] = useState('');
-  const [manualInput, setManualInput] = useState('');
-
-  const handleProcess = async (textToProcess: string) => {
-      if(!textToProcess) return;
-      setTranscript(textToProcess);
-      setStatus('processing');
-      
-      const responseText = await GeminiService.generateTextResponse(textToProcess, "Answer concisely in 2 sentences max. Keep it conversational. You are a study assistant.");
-      setAnswer(responseText);
-      
-      setStatus('speaking');
-      const audioBuffer = await GeminiService.generateSpeech(responseText);
-      if (audioBuffer) {
-        GeminiService.playAudioBuffer(audioBuffer);
-        // Reset after audio duration (approx)
-        setTimeout(() => setStatus('idle'), audioBuffer.duration * 1000 + 1000);
-      } else {
-        setStatus('idle');
-      }
-  }
-
-  const startListening = () => {
-    if (!('webkitSpeechRecognition' in window)) {
-      alert("Speech recognition not supported in this browser.");
-      return;
-    }
-    const recognition = new (window as any).webkitSpeechRecognition();
-    recognition.lang = 'en-US';
-    recognition.start();
-    setStatus('listening');
-
-    recognition.onresult = async (event: any) => {
-      const text = event.results[0][0].transcript;
-      handleProcess(text);
+    const typeIcons: any = {
+        'note': Icons.Book,
+        'quiz': Icons.Quiz,
+        'flashcard_set': Icons.Lightning,
+        'homework_solution': Icons.Camera,
+        'doubt_solution': Icons.Brain,
+        'essay_feedback': Icons.Pen,
+        'plan': Icons.Calendar,
+        'math_solution': Icons.Math,
+        'code_explanation': Icons.Code,
+        'diagram': Icons.Chart,
+        'ocr_note': Icons.Book,
+        'formula_sheet': Icons.Formula,
+        'citation': Icons.Quote,
+        'whiteboard_analysis': Icons.Pencil
     };
 
-    recognition.onerror = () => setStatus('idle');
-  };
-
-  const save = async () => {
-      const item: SavedItem = {
-          id: Date.now().toString(),
-          type: 'doubt_solution',
-          title: `Voice: ${transcript}`,
-          content: answer,
-          timestamp: Date.now()
-      };
-      await StorageService.saveItemToLibrary(item);
-  }
-
-  return (
-    <div className="p-6 pb-28 flex flex-col items-center justify-center text-center space-y-8 min-h-[60vh] animate-slide-up">
-      <div className={`relative w-40 h-40 rounded-full flex items-center justify-center transition-all duration-500 ${status === 'listening' ? 'scale-110' : ''}`}>
-        <div className={`absolute inset-0 bg-primary rounded-full opacity-20 ${status === 'listening' ? 'animate-ping' : ''}`}></div>
-        <div className={`absolute inset-0 bg-primary rounded-full opacity-10 ${status === 'processing' ? 'animate-pulse' : ''}`}></div>
-        <button onClick={startListening} disabled={status !== 'idle'} className={`relative z-10 w-24 h-24 rounded-full shadow-2xl flex items-center justify-center transition-colors ${status === 'listening' ? 'bg-accent' : 'bg-primary hover:bg-indigo-600'} text-white`}>
-          <div className="scale-125"><Icons.Mic /></div>
-        </button>
-      </div>
-      
-      <div className="max-w-xs mx-auto space-y-4 w-full">
-        <h3 className="text-2xl font-bold dark:text-white">
-          {status === 'idle' ? 'Tap or Type' : status === 'listening' ? 'Listening...' : status === 'processing' ? 'Thinking...' : 'Speaking...'}
-        </h3>
-        
-        {/* Manual Input Area */}
-        <div className="flex gap-2">
-            <input 
-                type="text" 
-                placeholder="Or type here..." 
-                className="flex-1 p-3 rounded-xl bg-white dark:bg-cardDark border border-gray-200 dark:border-gray-700 outline-none dark:text-white"
-                value={manualInput}
-                onChange={e => setManualInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleProcess(manualInput)}
-                disabled={status !== 'idle'}
-            />
-            <button 
-                onClick={() => handleProcess(manualInput)}
-                disabled={!manualInput || status !== 'idle'}
-                className="bg-primary text-white p-3 rounded-xl shadow-md disabled:opacity-50"
-            >
-                <Icons.Send />
-            </button>
+    return (
+        <div className="p-4 pb-28 space-y-4 animate-slide-up">
+             <h2 className="text-2xl font-bold dark:text-white mb-4">Your Library</h2>
+             {items.length === 0 && <div className="text-center text-gray-400 mt-10">Nothing saved yet.</div>}
+             {items.map(item => {
+                 const Icon = typeIcons[item.type] || Icons.Save;
+                 return (
+                     <div key={item.id} className="bg-white dark:bg-cardDark p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex gap-4 items-start">
+                         <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-xl text-gray-500 dark:text-gray-300">
+                             <Icon />
+                         </div>
+                         <div className="flex-1 overflow-hidden">
+                             <h3 className="font-bold text-gray-800 dark:text-white truncate">{item.title}</h3>
+                             <p className="text-xs text-gray-400 mt-1">{new Date(item.timestamp).toLocaleDateString()}</p>
+                             <div className="mt-2 text-xs text-indigo-600 dark:text-indigo-400 font-medium">Click to view (Coming Soon)</div>
+                         </div>
+                     </div>
+                 )
+             })}
         </div>
-
-        {transcript && (
-          <div className="bg-gray-100 dark:bg-cardDark p-4 rounded-xl text-sm border border-gray-200 dark:border-gray-700 text-left">
-             <p className="text-gray-500 dark:text-gray-400 italic">You: "{transcript}"</p>
-          </div>
-        )}
-        
-        {answer && (
-           <FeatureResult onSave={save} onRetry={() => { setAnswer(''); setTranscript(''); }}>
-             <p className="text-lg font-medium text-indigo-700 dark:text-indigo-300">AI: "{answer}"</p>
-           </FeatureResult>
-        )}
-      </div>
-    </div>
-  );
-};
-
-const SavedItems = () => {
-  const [items, setItems] = useState<SavedItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  
-  useEffect(() => {
-    loadItems();
-  }, []);
-
-  const loadItems = async () => {
-      setLoading(true);
-      const data = await StorageService.fetchLibraryItems();
-      setItems(data);
-      setLoading(false);
-  }
-
-  const renderContentPreview = (item: SavedItem) => {
-      // Helper to safely access nested content without crashing
-      try {
-        switch(item.type) {
-            case 'note': return (item.content as Note).summary || "Note";
-            case 'quiz': return `Score: ${item.content.score} / ${item.content.questions.length}`;
-            case 'essay_feedback': return `Grade: ${item.content.grade}`;
-            case 'plan': return typeof item.content === 'string' ? item.content : "Study Plan";
-            case 'code_explanation': return item.content.explanation ? item.content.explanation.slice(0, 100) : "Code Explanation";
-            case 'eli5': return typeof item.content === 'string' ? item.content : "ELI5 Explanation";
-            case 'doubt_solution': return typeof item.content === 'string' ? item.content : "Doubt Solution";
-            case 'math_solution': return item.content.answer ? `Answer: ${item.content.answer.slice(0, 50)}` : "Math Solution";
-            case 'genie_chat': return typeof item.content === 'string' ? `Chat: ${item.content.slice(0, 50)}` : "Genie Chat";
-            case 'homework_solution': return typeof item.content === 'string' ? item.content : "Homework";
-            case 'diagram': return "Diagram Code";
-            case 'formula_sheet': return `${item.content.length} formulas saved.`;
-            case 'ocr_note': return typeof item.content === 'string' ? item.content : "OCR Notes";
-            case 'citation': return typeof item.content === 'string' ? item.content : "Citation";
-            case 'whiteboard_analysis': return typeof item.content === 'string' ? item.content : "Whiteboard";
-            default: return "Saved content";
-        }
-      } catch (e) {
-          return "Content Unavailable";
-      }
-  }
-
-  const getIcon = (type: string) => {
-      switch(type) {
-          case 'note': return Icons.Book;
-          case 'quiz': return Icons.Quiz;
-          case 'essay_feedback': return Icons.Pen;
-          case 'code_explanation': return Icons.Code;
-          case 'math_solution': return Icons.Math;
-          case 'genie_chat': return Icons.Magic;
-          case 'homework_solution': return Icons.Camera;
-          case 'diagram': return Icons.Chart;
-          case 'formula_sheet': return Icons.Formula;
-          case 'ocr_note': return Icons.Book;
-          case 'citation': return Icons.Quote;
-          case 'whiteboard_analysis': return Icons.Pencil;
-          default: return Icons.Save;
-      }
-  }
-
-  return (
-    <div className="p-4 pb-28 space-y-4 animate-slide-up">
-      <div className="flex justify-between items-center px-2">
-         <h2 className="text-2xl font-bold dark:text-white">Library</h2>
-         <button onClick={loadItems} className="text-primary text-sm font-bold"><Icons.Refresh /></button>
-      </div>
-
-      {loading && <div className="text-center py-10 text-gray-400">Loading Library...</div>}
-      
-      {!loading && items.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-20 opacity-50">
-           <div className="bg-gray-100 dark:bg-gray-800 p-6 rounded-full mb-4">
-             <Icons.Book />
-           </div>
-           <p className="text-gray-500 font-medium">No saved items yet.</p>
-        </div>
-      )}
-      {!loading && items.map(item => {
-          const Icon = getIcon(item.type);
-          return (
-            <div key={item.id} className="bg-white dark:bg-cardDark p-5 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-shadow">
-            <div className="flex justify-between items-start mb-2">
-                <div className="flex items-center gap-2">
-                    <div className="p-1.5 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg text-primary"><Icon /></div>
-                    <h3 className="font-bold text-lg text-gray-800 dark:text-white truncate max-w-[200px]">{item.title}</h3>
-                </div>
-                <span className="text-[10px] bg-gray-100 dark:bg-gray-800 px-3 py-1 rounded-full text-gray-500 font-medium">{new Date(item.timestamp).toLocaleDateString()}</span>
-            </div>
-            <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2 mt-2">{renderContentPreview(item)}</p>
-            </div>
-        )
-      })}
-    </div>
-  );
+    )
 }
 
-// --- Main Layout ---
-
-export default function App() {
-  const [currentView, setCurrentView] = useState<View>('home');
-  const [isDark, setIsDark] = useState(false);
+const App = () => {
   const [user, setUser] = useState<User | null>(null);
-  const [sessionLoading, setSessionLoading] = useState(true);
+  const [view, setView] = useState<View>('home');
+  const [isDark, setIsDark] = useState(false);
 
   useEffect(() => {
-    // Check system preference
-    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-       setIsDark(true);
-    }
-    
-    // Check Supabase Auth
+    // Check initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session?.user) {
-            setUser({ name: session.user.email?.split('@')[0] || 'Student', email: session.user.email || '' });
+        if(session?.user) {
+             setUser({ name: session.user.email?.split('@')[0] || 'User', email: session.user.email || '' });
         }
-        setSessionLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-        if (session?.user) {
-            setUser({ name: session.user.email?.split('@')[0] || 'Student', email: session.user.email || '' });
-        } else {
-            setUser(null);
-        }
-        setSessionLoading(false);
+         if(session?.user) {
+             setUser({ name: session.user.email?.split('@')[0] || 'User', email: session.user.email || '' });
+         } else {
+             setUser(null);
+         }
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  useEffect(() => {
-    if (isDark) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [isDark]);
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setCurrentView('home');
+  const toggleTheme = () => {
+    setIsDark(!isDark);
+    document.documentElement.classList.toggle('dark');
   };
 
-  if (sessionLoading) {
-      return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-darkBg">
-             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-        </div>
-      )
+  const logout = async () => {
+      await supabase.auth.signOut();
+      setUser(null);
   }
 
   if (!user) {
-    return (
-        <div className="min-h-screen bg-gray-50 dark:bg-darkBg transition-colors duration-200 font-sans text-slate-800 dark:text-slate-100">
-             <Header title="StudyGenius AI" toggleTheme={() => setIsDark(!isDark)} isDark={isDark} user={null} onLogout={() => {}} />
-             <AuthView onLogin={setUser} />
-        </div>
-    )
+      return (
+          <div className={isDark ? 'dark' : ''}>
+              <div className="min-h-screen bg-gray-50 dark:bg-black transition-colors">
+                <div className="absolute top-4 right-4">
+                     <button onClick={toggleTheme} className="p-2 rounded-full bg-white dark:bg-gray-800 shadow-md">
+                        {isDark ? <Icons.Sun /> : <Icons.Moon />}
+                     </button>
+                </div>
+                <AuthView onLogin={setUser} />
+              </div>
+          </div>
+      );
   }
 
-  const renderView = () => {
-    switch (currentView) {
-      case 'home': return <HomeView setView={setCurrentView} user={user} />;
-      case 'doubt': return <DoubtSolver />;
-      case 'notes': return <NotesGenerator />;
-      case 'flashcards': return <Flashcards />;
-      case 'tutor': return <TutorChat />;
-      case 'timer': return <Timer />;
-      case 'voice': return <VoiceQA />;
-      case 'quiz': return <QuizGenerator />;
-      case 'essay': return <EssayGrader />;
-      case 'planner': return <StudyPlanner />;
-      case 'code': return <CodeExplainer />;
-      case 'eli5': return <ELI5 />;
-      case 'math': return <MathSolver />;
-      case 'saved': return <SavedItems />;
-      case 'homework': return <HomeworkSolver />;
-      case 'diagram': return <DiagramGenerator />;
-      case 'formula': return <FormulaSheet />;
-      case 'tracker': return <ProgressTracker />;
-      case 'ocr': return <OCRNotes />;
-      case 'citation': return <CitationGenerator />;
-      case 'whiteboard': return <Whiteboard />;
-      case 'summarizer': return (
-        <div className="p-4 text-center pb-28 animate-slide-up">
-            <h2 className="text-2xl font-bold mb-6 dark:text-white">Text Summarizer</h2>
-            <div className="glass-panel p-2 rounded-3xl shadow-lg mb-6">
-              <textarea placeholder="Paste your text here to summarize..." className="w-full h-56 bg-transparent p-4 rounded-2xl outline-none resize-none dark:text-white text-sm" />
-            </div>
-            <button className="bg-primary text-white px-8 py-3 rounded-xl shadow-xl shadow-primary/20 hover:scale-105 transition-transform font-bold w-full max-w-xs">Summarize</button>
-        </div>
-      );
-      default: return <HomeView setView={setCurrentView} user={user} />;
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-darkBg transition-colors duration-200 font-sans text-slate-800 dark:text-slate-100 relative">
-      <Header 
-        title="StudyGenius AI" 
-        toggleTheme={() => setIsDark(!isDark)} 
-        isDark={isDark}
-        user={user}
-        onLogout={handleLogout}
-      />
-      
-      <main className="max-w-md mx-auto min-h-screen relative">
-        {renderView()}
-      </main>
+    <div className={isDark ? 'dark' : ''}>
+      <div className="min-h-screen bg-gray-50 dark:bg-black transition-colors text-gray-900 dark:text-gray-100 font-sans">
+        <Header title={view.charAt(0).toUpperCase() + view.slice(1)} toggleTheme={toggleTheme} isDark={isDark} user={user} onLogout={logout} />
 
-      {/* Floating Bottom Nav */}
-      <nav className="fixed bottom-6 w-[90%] max-w-sm left-1/2 -translate-x-1/2 glass-panel rounded-3xl flex justify-around items-center py-2 z-50 shadow-2xl">
-        <NavButton icon={Icons.Home} label="Home" active={currentView === 'home'} onClick={() => setCurrentView('home')} />
-        <NavButton icon={Icons.Book} label="Study" active={['doubt', 'notes', 'summarizer', 'flashcards', 'tutor', 'quiz', 'essay', 'planner', 'code', 'eli5', 'math', 'homework', 'diagram', 'formula', 'tracker', 'ocr', 'citation', 'whiteboard'].includes(currentView)} onClick={() => setCurrentView('notes')} />
-        <NavButton icon={Icons.Save} label="Library" active={currentView === 'saved'} onClick={() => setCurrentView('saved')} />
-      </nav>
+        <main className="max-w-2xl mx-auto min-h-screen">
+          {view === 'home' && <HomeView setView={setView} user={user} />}
+          {view === 'homework' && <HomeworkSolver />}
+          {view === 'doubt' && <DoubtSolver />}
+          {view === 'math' && <MathSolver />}
+          {view === 'diagram' && <DiagramGenerator />}
+          {view === 'notes' && <NotesGenerator />}
+          {view === 'formula' && <FormulaSheet />}
+          {view === 'ocr' && <OCRNotes />}
+          {view === 'tracker' && <ProgressTracker />}
+          {view === 'citation' && <CitationGenerator />}
+          {view === 'flashcards' && <Flashcards />}
+          {view === 'quiz' && <QuizGenerator />}
+          {view === 'essay' && <EssayGrader />}
+          {view === 'code' && <CodeExplainer />}
+          {view === 'eli5' && <ELI5 />}
+          {view === 'planner' && <StudyPlanner />}
+          {view === 'tutor' && <TutorChat />}
+          {view === 'whiteboard' && <Whiteboard />}
+          {view === 'saved' && <SavedView />}
+        </main>
 
-      {/* Global Genie AI */}
-      <GlobalGenie />
+        <GlobalGenie />
+
+        <nav className="fixed bottom-0 w-full glass-panel border-t border-gray-200 dark:border-gray-800 p-2 z-30 pb-6">
+             <div className="max-w-md mx-auto flex justify-around items-center">
+                <NavButton icon={Icons.Home} label="Home" active={view === 'home'} onClick={() => setView('home')} />
+                <NavButton icon={Icons.Brain} label="Ask" active={view === 'doubt'} onClick={() => setView('doubt')} />
+                <NavButton icon={Icons.User} label="Tutor" active={view === 'tutor'} onClick={() => setView('tutor')} />
+                <NavButton icon={Icons.Book} label="Library" active={view === 'saved'} onClick={() => setView('saved')} />
+             </div>
+          </nav>
+      </div>
     </div>
   );
-}
+};
+
+export default App;
