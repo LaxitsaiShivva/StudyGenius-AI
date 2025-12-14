@@ -20,6 +20,8 @@ const Icons = {
   Send: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>,
   Refresh: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>,
   Homework: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>,
+  Moon: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>,
+  Sun: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>,
 };
 
 // --- Helper Components ---
@@ -62,6 +64,7 @@ const Loader = () => (
 const AuthView = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState(''); // New State for Name
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -76,7 +79,15 @@ const AuthView = () => {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
       } else {
-        const { error } = await supabase.auth.signUp({ email, password });
+        const { error } = await supabase.auth.signUp({ 
+          email, 
+          password,
+          options: {
+            data: {
+              full_name: fullName, // Save full name in metadata
+            }
+          }
+        });
         if (error) throw error;
         else alert('Check your email for the confirmation link!');
       }
@@ -98,6 +109,14 @@ const AuthView = () => {
         {error && <div className="mb-4 p-3 bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 rounded-lg text-sm">{error}</div>}
         
         <form onSubmit={handleAuth} className="space-y-4">
+          {!isLogin && (
+            <Input 
+              type="text" 
+              placeholder="Your Name" 
+              value={fullName} 
+              onChange={(e: any) => setFullName(e.target.value)} 
+            />
+          )}
           <Input 
             type="email" 
             placeholder="Email address" 
@@ -131,14 +150,21 @@ const AuthView = () => {
 
 // --- Feature Views ---
 
-const HomeView = ({ onChangeView }: { onChangeView: (v: View) => void }) => {
+const HomeView = ({ onChangeView, userName }: { onChangeView: (v: View) => void, userName: string }) => {
   const quote = MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)];
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good Morning';
+    if (hour < 18) return 'Good Afternoon';
+    return 'Good Evening';
+  };
 
   return (
     <div className="space-y-6 animate-fade-in pb-20">
       <div className="bg-indigo-600 rounded-3xl p-8 text-white shadow-xl relative overflow-hidden">
         <div className="relative z-10">
-          <h2 className="text-2xl font-bold mb-2">Welcome back!</h2>
+          <h2 className="text-2xl font-bold mb-2">{getGreeting()}, {userName}!</h2>
           <p className="opacity-90 italic">"{quote}"</p>
         </div>
         <div className="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-white opacity-10 rounded-full blur-2xl"></div>
@@ -545,6 +571,22 @@ export default function App() {
   const [view, setView] = useState<View>('home');
   const [tutor, setTutor] = useState<TutorPersona | undefined>(undefined);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  // Theme State
+  const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
+
+  useEffect(() => {
+    // Apply theme
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'light' ? 'dark' : 'light');
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -557,7 +599,6 @@ export default function App() {
         if (mounted) setSession(session);
       } catch (err) {
         console.error("Session initialization failed:", err);
-        // Even if auth fails, we should stop loading to show AuthView (or error)
       } finally {
         if (mounted) setLoading(false);
       }
@@ -585,9 +626,12 @@ export default function App() {
 
   if (!session) return <AuthView />;
 
+  // Get user name from metadata or email
+  const userName = session.user?.user_metadata?.full_name || session.user?.email?.split('@')[0] || 'Student';
+
   const renderView = () => {
     switch (view) {
-      case 'home': return <HomeView onChangeView={setView} />;
+      case 'home': return <HomeView onChangeView={setView} userName={userName} />;
       case 'doubt': return <ChatView mode="doubt" />;
       case 'tutor': 
         if (!tutor) {
@@ -612,17 +656,22 @@ export default function App() {
       case 'quiz': return <QuizView />;
       case 'homework': return <HomeworkView />;
       case 'saved': return <LibraryView />;
-      default: return <HomeView onChangeView={setView} />;
+      default: return <HomeView onChangeView={setView} userName={userName} />;
     }
   };
 
   return (
-    <div className="flex min-h-screen bg-gray-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100">
+    <div className="flex min-h-screen bg-gray-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 transition-colors duration-300">
       {/* Sidebar for Desktop */}
       <aside className="hidden md:flex flex-col w-64 bg-white dark:bg-slate-900 border-r dark:border-slate-800 p-4 fixed h-full z-10">
-        <div className="mb-8 px-2 flex items-center gap-2">
-           <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold">S</div>
-           <span className="font-bold text-xl">StudyGenius</span>
+        <div className="mb-8 px-2 flex items-center justify-between">
+           <div className="flex items-center gap-2">
+             <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold">S</div>
+             <span className="font-bold text-xl">StudyGenius</span>
+           </div>
+           <button onClick={toggleTheme} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400">
+              {theme === 'dark' ? <Icons.Sun /> : <Icons.Moon />}
+           </button>
         </div>
         
         <nav className="flex-1 space-y-1">
@@ -657,9 +706,14 @@ export default function App() {
         {/* Mobile Header */}
         <header className="md:hidden flex items-center justify-between p-4 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md sticky top-0 z-20 border-b dark:border-slate-800">
           <span className="font-bold text-lg">StudyGenius</span>
-          <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2">
-            {mobileMenuOpen ? <Icons.Close /> : <Icons.Menu />}
-          </button>
+          <div className="flex gap-2">
+            <button onClick={toggleTheme} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400">
+              {theme === 'dark' ? <Icons.Sun /> : <Icons.Moon />}
+            </button>
+            <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2">
+              {mobileMenuOpen ? <Icons.Close /> : <Icons.Menu />}
+            </button>
+          </div>
         </header>
 
         {/* Mobile Menu Overlay */}

@@ -7,8 +7,6 @@ const getAi = (): GoogleGenAI => {
   if (!aiInstance) {
     // We access process.env.API_KEY here, inside the function, 
     // ensuring the environment/polyfills are ready.
-    // We fallback to empty string to prevent crash, allowing the app to load
-    // (though AI calls will fail if key is missing).
     const apiKey = process.env.API_KEY || ''; 
     aiInstance = new GoogleGenAI({ apiKey: apiKey });
   }
@@ -391,8 +389,8 @@ export const playAudioBuffer = (buffer: AudioBuffer) => {
    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({sampleRate: 24000});
    const source = audioContext.createBufferSource();
    source.buffer = buffer;
-   // INCREASE PLAYBACK RATE TO MAKE SPEECH FASTER
-   source.playbackRate.value = 1.25; 
+   // Set playback rate to 1.5x for faster speech
+   source.playbackRate.value = 1.5; 
    source.connect(audioContext.destination);
    source.start();
 }
