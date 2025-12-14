@@ -266,7 +266,7 @@ export const generateCodeExplanation = async (code: string): Promise<string> => 
         const ai = getAi();
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
-            contents: `Explain this code snippet in simple terms. Identify any potential bugs or improvements: \n\n${code}`,
+            contents: `Explain this code snippet in simple terms. Provide a concrete code example showing how to use it. Identify any potential bugs or improvements: \n\n${code}`,
         });
         return response.text || "Could not explain code.";
     } catch (e) {
