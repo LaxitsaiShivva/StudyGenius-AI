@@ -194,20 +194,22 @@ const HomeView = ({ onChangeView, userName }: { onChangeView: (v: View) => void,
   );
 };
 
-const ChatView = ({ mode, persona }: { mode: 'doubt' | 'tutor', persona?: TutorPersona }) => {
+const ChatView = ({ mode, persona, initialData }: { mode: 'doubt' | 'tutor', persona?: TutorPersona, initialData?: any }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
+  
   useEffect(() => {
-    if (mode === 'tutor' && persona) {
+    if (initialData?.messages) {
+       setMessages(initialData.messages);
+    } else if (mode === 'tutor' && persona && messages.length === 0) {
       setMessages([{
         id: 'init', role: 'model', timestamp: Date.now(),
         text: `Hello! I'm ${persona.name}. ${persona.systemInstruction.split('.')[1] || 'How can I help you today?'}`
       }]);
     }
-  }, [mode, persona]);
+  }, [mode, persona, initialData]);
 
   const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   useEffect(scrollToBottom, [messages]);
@@ -226,9 +228,37 @@ const ChatView = ({ mode, persona }: { mode: 'doubt' | 'tutor', persona?: TutorP
     setMessages(prev => [...prev, botMsg]);
     setLoading(false);
   };
+  
+  const saveChat = async () => {
+     if (messages.length === 0) return;
+     const title = mode === 'tutor' 
+        ? `Chat with ${persona?.name || 'Tutor'} (${new Date().toLocaleDateString()})` 
+        : `Doubt Session (${new Date().toLocaleDateString()})`;
+     
+     await StorageService.saveItemToLibrary({
+         id: Date.now().toString(),
+         type: 'chat_history',
+         title: title,
+         content: {
+             mode,
+             persona,
+             messages
+         },
+         timestamp: Date.now()
+     });
+     alert('Chat saved to Library!');
+  };
 
   return (
     <div className="flex flex-col h-[calc(100vh-140px)]">
+      <div className="flex justify-between items-center px-4 py-2 border-b dark:border-slate-800">
+          <span className="text-sm text-gray-500">
+             {mode === 'tutor' ? `Session with ${persona?.name}` : 'Study Assistant'}
+          </span>
+          <Button variant="ghost" onClick={saveChat} className="text-xs px-2 py-1">
+             <Icons.Save /> Save Chat
+          </Button>
+      </div>
       <div className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
         {messages.map((msg) => (
           <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -528,7 +558,7 @@ const HomeworkView = () => {
   );
 }
 
-const LibraryView = () => {
+const LibraryView = ({ onLoadChat }: { onLoadChat: (item: SavedItem) => void }) => {
   const [items, setItems] = useState<SavedItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -554,9 +584,21 @@ const LibraryView = () => {
                 <span className="text-xs text-gray-400">{new Date(item.timestamp).toLocaleDateString()}</span>
              </div>
              <h3 className="font-bold text-lg mb-2">{item.title}</h3>
-             <div className="text-sm text-gray-600 dark:text-gray-400 line-clamp-3">
-                {typeof item.content === 'string' ? item.content : JSON.stringify(item.content)}
-             </div>
+             
+             {item.type === 'chat_history' ? (
+                 <div className="mt-2">
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">
+                        {item.content.messages?.[item.content.messages.length - 1]?.text || 'No messages'}
+                    </p>
+                    <Button variant="outline" onClick={() => onLoadChat(item)} className="w-full text-sm">
+                        Continue Chat
+                    </Button>
+                 </div>
+             ) : (
+                 <div className="text-sm text-gray-600 dark:text-gray-400 line-clamp-3">
+                    {typeof item.content === 'string' ? item.content : JSON.stringify(item.content)}
+                 </div>
+             )}
           </div>
         ))
       )}
@@ -570,6 +612,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<View>('home');
   const [tutor, setTutor] = useState<TutorPersona | undefined>(undefined);
+  const [activeChat, setActiveChat] = useState<any>(null); // State for loaded chat history
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   // Theme State
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
@@ -616,6 +659,21 @@ export default function App() {
     };
   }, []);
 
+  const handleLoadChat = (item: SavedItem) => {
+      if (item.type === 'chat_history') {
+          const chatData = item.content;
+          setTutor(chatData.persona);
+          setActiveChat(chatData);
+          setView(chatData.mode === 'tutor' ? 'tutor' : 'doubt');
+      }
+  };
+
+  const changeView = (newView: View) => {
+      setView(newView);
+      setTutor(undefined);
+      setActiveChat(null); // Reset active chat when switching views from menu
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-900">
@@ -631,8 +689,8 @@ export default function App() {
 
   const renderView = () => {
     switch (view) {
-      case 'home': return <HomeView onChangeView={setView} userName={userName} />;
-      case 'doubt': return <ChatView mode="doubt" />;
+      case 'home': return <HomeView onChangeView={changeView} userName={userName} />;
+      case 'doubt': return <ChatView mode="doubt" initialData={activeChat} />;
       case 'tutor': 
         if (!tutor) {
            return (
@@ -650,13 +708,13 @@ export default function App() {
              </div>
            );
         }
-        return <ChatView mode="tutor" persona={tutor} />;
+        return <ChatView mode="tutor" persona={tutor} initialData={activeChat} />;
       case 'notes': return <NotesView />;
       case 'flashcards': return <FlashcardsView />;
       case 'quiz': return <QuizView />;
       case 'homework': return <HomeworkView />;
-      case 'saved': return <LibraryView />;
-      default: return <HomeView onChangeView={setView} userName={userName} />;
+      case 'saved': return <LibraryView onLoadChat={handleLoadChat} />;
+      default: return <HomeView onChangeView={changeView} userName={userName} />;
     }
   };
 
@@ -687,7 +745,7 @@ export default function App() {
           ].map((item) => (
             <button
               key={item.id}
-              onClick={() => { setView(item.id as View); setTutor(undefined); }}
+              onClick={() => changeView(item.id as View)}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${view === item.id ? 'bg-indigo-50 dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 font-medium' : 'text-slate-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-800'}`}
             >
               {item.icon}
@@ -727,7 +785,7 @@ export default function App() {
                {['home', 'doubt', 'notes', 'flashcards', 'quiz', 'tutor', 'homework', 'saved'].map((v) => (
                  <button 
                    key={v}
-                   onClick={() => { setView(v as View); setMobileMenuOpen(false); setTutor(undefined); }}
+                   onClick={() => { changeView(v as View); setMobileMenuOpen(false); }}
                    className="w-full text-left p-4 rounded-xl bg-gray-50 dark:bg-slate-800 capitalize font-medium"
                  >
                    {v}

@@ -8,7 +8,7 @@ export interface User {
 
 export interface SavedItem {
   id: string;
-  type: 'note' | 'flashcard_set' | 'quiz' | 'essay_feedback' | 'plan' | 'code_explanation' | 'eli5' | 'doubt_solution' | 'math_solution' | 'genie_chat' | 'homework_solution' | 'diagram' | 'formula_sheet' | 'ocr_note' | 'citation' | 'whiteboard_analysis';
+  type: 'note' | 'flashcard_set' | 'quiz' | 'essay_feedback' | 'plan' | 'code_explanation' | 'eli5' | 'doubt_solution' | 'math_solution' | 'genie_chat' | 'homework_solution' | 'diagram' | 'formula_sheet' | 'ocr_note' | 'citation' | 'whiteboard_analysis' | 'chat_history';
   title: string;
   content: any; // Can be string or object depending on type
   timestamp: number;
