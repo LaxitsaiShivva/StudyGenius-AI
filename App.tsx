@@ -19,6 +19,7 @@ const Icons = {
   Logout: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>,
   Send: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>,
   Refresh: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>,
+  Homework: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>,
 };
 
 // --- Helper Components ---
@@ -150,6 +151,7 @@ const HomeView = ({ onChangeView }: { onChangeView: (v: View) => void }) => {
           { id: 'flashcards', label: 'Flashcards', icon: <Icons.Card />, color: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400' },
           { id: 'quiz', label: 'Take Quiz', icon: <Icons.Quiz />, color: 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400' },
           { id: 'tutor', label: 'AI Tutor', icon: <Icons.Tutor />, color: 'bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400' },
+          { id: 'homework', label: 'Homework Solver', icon: <Icons.Homework />, color: 'bg-cyan-100 text-cyan-600 dark:bg-cyan-900/30 dark:text-cyan-400' },
           { id: 'saved', label: 'Library', icon: <Icons.Save />, color: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400' },
         ].map((item) => (
           <button
@@ -158,7 +160,7 @@ const HomeView = ({ onChangeView }: { onChangeView: (v: View) => void }) => {
             className={`${item.color} p-6 rounded-2xl flex flex-col items-center justify-center gap-3 transition-transform hover:scale-105 active:scale-95 shadow-sm`}
           >
             <div className="p-3 bg-white/50 dark:bg-black/20 rounded-full">{item.icon}</div>
-            <span className="font-semibold">{item.label}</span>
+            <span className="font-semibold text-center">{item.label}</span>
           </button>
         ))}
       </div>
@@ -401,6 +403,105 @@ const QuizView = () => {
   );
 };
 
+const HomeworkView = () => {
+  const [image, setImage] = useState<string | null>(null);
+  const [solution, setSolution] = useState<string>('');
+  const [loading, setLoading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImage(reader.result as string);
+        setSolution('');
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const solve = async () => {
+    if (!image) return;
+    setLoading(true);
+    // Extract base64 data and mime type
+    const base64Data = image.split(',')[1];
+    const mimeType = image.split(';')[0].split(':')[1];
+    
+    const result = await GeminiService.analyzeHomework(base64Data, mimeType);
+    setSolution(result);
+    setLoading(false);
+  };
+
+  return (
+    <div className="p-4 space-y-6 pb-20">
+      <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 text-center">
+        <input 
+          type="file" 
+          ref={fileInputRef}
+          onChange={handleImageUpload} 
+          accept="image/*" 
+          className="hidden" 
+        />
+        
+        {!image ? (
+          <div 
+            onClick={() => fileInputRef.current?.click()}
+            className="cursor-pointer flex flex-col items-center gap-4 py-8 border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+          >
+            <div className="p-4 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 rounded-full">
+               <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+            </div>
+            <div>
+              <p className="font-semibold">Upload Homework Page</p>
+              <p className="text-sm text-gray-500">Tap to take a photo or upload image</p>
+            </div>
+          </div>
+        ) : (
+          <div className="relative">
+             <img src={image} alt="Homework" className="max-h-64 mx-auto rounded-lg shadow-md" />
+             <button 
+               onClick={() => { setImage(null); setSolution(''); }}
+               className="absolute top-2 right-2 p-1 bg-white dark:bg-slate-800 rounded-full shadow-lg text-rose-500"
+             >
+               <Icons.Close />
+             </button>
+          </div>
+        )}
+
+        {image && !solution && (
+           <Button onClick={solve} disabled={loading} className="w-full mt-4">
+             {loading ? <Loader /> : 'Solve Questions'}
+           </Button>
+        )}
+      </div>
+
+      {solution && (
+        <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 animate-slide-up">
+           <div className="flex justify-between items-center mb-4">
+             <h3 className="font-bold text-xl text-indigo-600">Solution</h3>
+             <Button variant="ghost" onClick={async () => {
+                await StorageService.saveItemToLibrary({
+                  id: Date.now().toString(),
+                  type: 'homework_solution',
+                  title: 'Homework Solution ' + new Date().toLocaleDateString(),
+                  content: solution,
+                  timestamp: Date.now()
+                });
+                alert('Saved to Library!');
+             }}>
+               <Icons.Save />
+             </Button>
+           </div>
+           <div className="whitespace-pre-wrap text-slate-700 dark:text-slate-300 leading-relaxed">
+             {solution}
+           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 const LibraryView = () => {
   const [items, setItems] = useState<SavedItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -493,6 +594,7 @@ export default function App() {
       case 'notes': return <NotesView />;
       case 'flashcards': return <FlashcardsView />;
       case 'quiz': return <QuizView />;
+      case 'homework': return <HomeworkView />;
       case 'saved': return <LibraryView />;
       default: return <HomeView onChangeView={setView} />;
     }
@@ -515,6 +617,7 @@ export default function App() {
             { id: 'flashcards', label: 'Flashcards', icon: <Icons.Card /> },
             { id: 'quiz', label: 'Quiz', icon: <Icons.Quiz /> },
             { id: 'tutor', label: 'Tutor', icon: <Icons.Tutor /> },
+            { id: 'homework', label: 'Homework', icon: <Icons.Homework /> },
             { id: 'saved', label: 'Library', icon: <Icons.Save /> },
           ].map((item) => (
             <button
@@ -551,7 +654,7 @@ export default function App() {
                 <button onClick={() => setMobileMenuOpen(false)}><Icons.Close /></button>
              </div>
              <nav className="space-y-2">
-               {['home', 'doubt', 'notes', 'flashcards', 'quiz', 'tutor', 'saved'].map((v) => (
+               {['home', 'doubt', 'notes', 'flashcards', 'quiz', 'tutor', 'homework', 'saved'].map((v) => (
                  <button 
                    key={v}
                    onClick={() => { setView(v as View); setMobileMenuOpen(false); setTutor(undefined); }}
