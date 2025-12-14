@@ -6,9 +6,5 @@ export default defineConfig({
   base: '/',
   build: {
     outDir: 'dist',
-  },
-  define: {
-    // Prevent crashes in code relying on process.env
-    'process.env': {}
   }
 });
