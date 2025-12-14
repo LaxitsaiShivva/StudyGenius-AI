@@ -1,8 +1,19 @@
-
 import { GoogleGenAI, Modality, Type } from "@google/genai";
 
-// Initialize the client. API_KEY is injected by the environment.
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Lazy initialization helper
+let aiInstance: GoogleGenAI | null = null;
+
+const getAi = (): GoogleGenAI => {
+  if (!aiInstance) {
+    // We access process.env.API_KEY here, inside the function, 
+    // ensuring the environment/polyfills are ready.
+    // We fallback to empty string to prevent crash, allowing the app to load
+    // (though AI calls will fail if key is missing).
+    const apiKey = process.env.API_KEY || ''; 
+    aiInstance = new GoogleGenAI({ apiKey: apiKey });
+  }
+  return aiInstance;
+};
 
 // Audio Helper Functions
 function decode(base64: string) {
@@ -40,6 +51,7 @@ export const generateTextResponse = async (
   modelName: string = 'gemini-2.5-flash'
 ): Promise<string> => {
   try {
+    const ai = getAi();
     const response = await ai.models.generateContent({
       model: modelName,
       contents: prompt,
@@ -60,6 +72,7 @@ export const generateImageResponse = async (
   mimeType: string
 ): Promise<string> => {
   try {
+    const ai = getAi();
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: {
@@ -85,6 +98,7 @@ export const generateImageResponse = async (
 
 export const generateFlashcards = async (topic: string): Promise<any[]> => {
   try {
+    const ai = getAi();
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: `Generate 5 flashcards for the topic: "${topic}".`,
@@ -113,6 +127,7 @@ export const generateFlashcards = async (topic: string): Promise<any[]> => {
 
 export const generateQuiz = async (topic: string): Promise<any[]> => {
   try {
+    const ai = getAi();
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: `Generate a multiple choice quiz with 3 questions about: "${topic}".`,
@@ -150,6 +165,7 @@ export const generateQuiz = async (topic: string): Promise<any[]> => {
 
 export const generateNotes = async (topic: string): Promise<any> => {
   try {
+    const ai = getAi();
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: `Create detailed study notes for: "${topic}".`,
@@ -176,6 +192,7 @@ export const generateNotes = async (topic: string): Promise<any> => {
 
 export const generateEssayFeedback = async (essay: string): Promise<any> => {
     try {
+        const ai = getAi();
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: `Grade this essay and provide feedback: "${essay}"`,
@@ -201,6 +218,7 @@ export const generateEssayFeedback = async (essay: string): Promise<any> => {
 
 export const generateStudyPlan = async (subjects: string, hours: string): Promise<string> => {
     try {
+        const ai = getAi();
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: `Create a weekly study schedule (Markdown format table) for these subjects: ${subjects}. I have ${hours} hours available per day. Be realistic and include breaks.`,
@@ -214,6 +232,7 @@ export const generateStudyPlan = async (subjects: string, hours: string): Promis
 
 export const generateCodeExplanation = async (code: string): Promise<string> => {
     try {
+        const ai = getAi();
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: `Explain this code snippet in simple terms. Identify any potential bugs or improvements: \n\n${code}`,
@@ -226,6 +245,7 @@ export const generateCodeExplanation = async (code: string): Promise<string> => 
 
 export const generateSimplification = async (topic: string): Promise<string> => {
     try {
+        const ai = getAi();
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: `Explain "${topic}" like I am 5 years old. Use analogies.`,
@@ -238,6 +258,7 @@ export const generateSimplification = async (topic: string): Promise<string> => 
 
 export const generateDiagramCode = async (topic: string, type: string): Promise<string> => {
   try {
+    const ai = getAi();
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: `Create a ${type} for "${topic}" using Mermaid.js syntax. Return ONLY the code, starting with 'graph', 'flowchart', 'mindmap' etc. Do not include markdown backticks.`,
@@ -253,6 +274,7 @@ export const generateDiagramCode = async (topic: string, type: string): Promise<
 
 export const generateFormulas = async (subject: string): Promise<any[]> => {
   try {
+     const ai = getAi();
      const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: `List 10 essential formulas for ${subject}.`,
@@ -280,6 +302,7 @@ export const generateFormulas = async (subject: string): Promise<any[]> => {
 
 export const generateCitation = async (text: string, style: string): Promise<string> => {
    try {
+        const ai = getAi();
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: `Generate a ${style} citation for the following source/text: "${text}".`,
@@ -292,6 +315,7 @@ export const generateCitation = async (text: string, style: string): Promise<str
 
 export const analyzeHomework = async (base64Image: string, mimeType: string): Promise<string> => {
      try {
+    const ai = getAi();
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: {
@@ -317,6 +341,7 @@ export const analyzeHomework = async (base64Image: string, mimeType: string): Pr
 
 export const analyzeProgress = async (stats: any): Promise<string> => {
      try {
+        const ai = getAi();
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: `Here are my study stats: ${JSON.stringify(stats)}. Give me 3 specific tips to improve.`,
@@ -329,6 +354,7 @@ export const analyzeProgress = async (stats: any): Promise<string> => {
 
 export const generateSpeech = async (text: string): Promise<AudioBuffer | null> => {
   try {
+    const ai = getAi();
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash-preview-tts",
       contents: [{ parts: [{ text: text }] }],
