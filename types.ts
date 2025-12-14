@@ -63,6 +63,7 @@ export interface FormulaItem {
   name: string;
   formula: string;
   explanation: string;
+  example: string;
 }
 
 export interface StudySession {

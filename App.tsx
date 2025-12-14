@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, SavedItem, ChatMessage, TutorPersona, User, QuizQuestion, SubjectProgress } from './types';
+import { View, SavedItem, ChatMessage, TutorPersona, User, QuizQuestion, SubjectProgress, FormulaItem } from './types';
 import { TUTORS, MOTIVATIONAL_QUOTES } from './constants';
 import * as GeminiService from './services/geminiService';
 import * as StorageService from './services/storageService';
@@ -20,6 +20,7 @@ const Icons = {
   Send: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>,
   Refresh: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>,
   Homework: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>,
+  Formula: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" /></svg>,
   Moon: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>,
   Sun: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>,
 };
@@ -176,6 +177,7 @@ const HomeView = ({ onChangeView, userName }: { onChangeView: (v: View) => void,
           { id: 'notes', label: 'Create Notes', icon: <Icons.Note />, color: 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400' },
           { id: 'flashcards', label: 'Flashcards', icon: <Icons.Card />, color: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400' },
           { id: 'quiz', label: 'Take Quiz', icon: <Icons.Quiz />, color: 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400' },
+          { id: 'formula', label: 'Formula Sheet', icon: <Icons.Formula />, color: 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400' },
           { id: 'tutor', label: 'AI Tutor', icon: <Icons.Tutor />, color: 'bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400' },
           { id: 'homework', label: 'Homework Solver', icon: <Icons.Homework />, color: 'bg-cyan-100 text-cyan-600 dark:bg-cyan-900/30 dark:text-cyan-400' },
           { id: 'saved', label: 'Library', icon: <Icons.Save />, color: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400' },
@@ -558,6 +560,51 @@ const HomeworkView = () => {
   );
 }
 
+const FormulaView = () => {
+  const [subject, setSubject] = useState('');
+  const [formulas, setFormulas] = useState<FormulaItem[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const generate = async () => {
+    setLoading(true);
+    const result = await GeminiService.generateFormulas(subject);
+    setFormulas(result);
+    setLoading(false);
+  };
+
+  return (
+    <div className="p-4 space-y-6 pb-20">
+      <div className="flex gap-2">
+        <Input value={subject} onChange={(e: any) => setSubject(e.target.value)} placeholder="Subject (e.g., Physics, Calculus)..." />
+        <Button onClick={generate} disabled={loading || !subject}>{loading ? <Loader /> : 'Generate'}</Button>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        {formulas.map((item, idx) => (
+          <div key={idx} className="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700">
+            <h3 className="font-bold text-lg text-indigo-600 mb-2">{item.name}</h3>
+            <div className="bg-gray-50 dark:bg-slate-900/50 p-3 rounded-lg mb-3 font-mono text-sm text-center">
+              {item.formula}
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">{item.explanation}</p>
+            <div className="text-sm bg-indigo-50 dark:bg-indigo-900/20 p-3 rounded-lg text-indigo-800 dark:text-indigo-200">
+              <strong>Example:</strong> {item.example}
+            </div>
+          </div>
+        ))}
+      </div>
+       {formulas.length > 0 && (
+          <Button onClick={async () => {
+            await StorageService.saveItemToLibrary({
+               id: Date.now().toString(), type: 'formula_sheet', title: `${subject} Formulas`, content: formulas, timestamp: Date.now()
+            });
+            alert('Saved!');
+          }} className="w-full">Save Formula Sheet</Button>
+        )}
+    </div>
+  );
+};
+
 const LibraryView = ({ onLoadChat }: { onLoadChat: (item: SavedItem) => void }) => {
   const [items, setItems] = useState<SavedItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -713,6 +760,7 @@ export default function App() {
       case 'flashcards': return <FlashcardsView />;
       case 'quiz': return <QuizView />;
       case 'homework': return <HomeworkView />;
+      case 'formula': return <FormulaView />;
       case 'saved': return <LibraryView onLoadChat={handleLoadChat} />;
       default: return <HomeView onChangeView={changeView} userName={userName} />;
     }
@@ -739,6 +787,7 @@ export default function App() {
             { id: 'notes', label: 'Notes', icon: <Icons.Note /> },
             { id: 'flashcards', label: 'Flashcards', icon: <Icons.Card /> },
             { id: 'quiz', label: 'Quiz', icon: <Icons.Quiz /> },
+            { id: 'formula', label: 'Formulas', icon: <Icons.Formula /> },
             { id: 'tutor', label: 'Tutor', icon: <Icons.Tutor /> },
             { id: 'homework', label: 'Homework', icon: <Icons.Homework /> },
             { id: 'saved', label: 'Library', icon: <Icons.Save /> },
@@ -782,7 +831,7 @@ export default function App() {
                 <button onClick={() => setMobileMenuOpen(false)}><Icons.Close /></button>
              </div>
              <nav className="space-y-2">
-               {['home', 'doubt', 'notes', 'flashcards', 'quiz', 'tutor', 'homework', 'saved'].map((v) => (
+               {['home', 'doubt', 'notes', 'flashcards', 'quiz', 'formula', 'tutor', 'homework', 'saved'].map((v) => (
                  <button 
                    key={v}
                    onClick={() => { changeView(v as View); setMobileMenuOpen(false); }}

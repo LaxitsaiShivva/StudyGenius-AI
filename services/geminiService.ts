@@ -275,7 +275,7 @@ export const generateFormulas = async (subject: string): Promise<any[]> => {
      const ai = getAi();
      const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
-      contents: `List 10 essential formulas for ${subject}.`,
+      contents: `List 10 essential formulas for ${subject}. For each, provide the formula, a brief explanation, and a simple practice example with solution.`,
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -285,9 +285,10 @@ export const generateFormulas = async (subject: string): Promise<any[]> => {
             properties: {
               name: { type: Type.STRING },
               formula: { type: Type.STRING },
-              explanation: { type: Type.STRING }
+              explanation: { type: Type.STRING },
+              example: { type: Type.STRING }
             },
-            required: ['name', 'formula', 'explanation']
+            required: ['name', 'formula', 'explanation', 'example']
           }
         }
       }
