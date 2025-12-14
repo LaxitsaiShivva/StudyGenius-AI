@@ -21,6 +21,7 @@ const Icons = {
   Refresh: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>,
   Homework: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>,
   Formula: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" /></svg>,
+  Tracker: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>,
   Moon: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>,
   Sun: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>,
 };
@@ -177,6 +178,7 @@ const HomeView = ({ onChangeView, userName }: { onChangeView: (v: View) => void,
           { id: 'notes', label: 'Create Notes', icon: <Icons.Note />, color: 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400' },
           { id: 'flashcards', label: 'Flashcards', icon: <Icons.Card />, color: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400' },
           { id: 'quiz', label: 'Take Quiz', icon: <Icons.Quiz />, color: 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400' },
+          { id: 'tracker', label: 'Tracker', icon: <Icons.Tracker />, color: 'bg-teal-100 text-teal-600 dark:bg-teal-900/30 dark:text-teal-400' },
           { id: 'formula', label: 'Formula Sheet', icon: <Icons.Formula />, color: 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400' },
           { id: 'tutor', label: 'AI Tutor', icon: <Icons.Tutor />, color: 'bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400' },
           { id: 'homework', label: 'Homework Solver', icon: <Icons.Homework />, color: 'bg-cyan-100 text-cyan-600 dark:bg-cyan-900/30 dark:text-cyan-400' },
@@ -605,6 +607,146 @@ const FormulaView = () => {
   );
 };
 
+const TrackerView = () => {
+  const [stats, setStats] = useState<SubjectProgress[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [analysis, setAnalysis] = useState('');
+  const [analyzing, setAnalyzing] = useState(false);
+  const [subjectInput, setSubjectInput] = useState('');
+  const [chapterInput, setChapterInput] = useState('');
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  const fetchStats = async () => {
+      // Try local storage first for immediate render
+      const local = localStorage.getItem('user_stats');
+      if (local) setStats(JSON.parse(local));
+      
+      // Then sync with DB (if available)
+      const dbStats = await StorageService.fetchUserStats();
+      if (dbStats && dbStats.length > 0) {
+          setStats(dbStats);
+          localStorage.setItem('user_stats', JSON.stringify(dbStats));
+      }
+      setLoading(false);
+  };
+
+  const saveStats = async (newStats: SubjectProgress[]) => {
+      setStats(newStats);
+      localStorage.setItem('user_stats', JSON.stringify(newStats));
+      await StorageService.saveUserStats(newStats);
+  };
+
+  const addSubject = () => {
+      if (!subjectInput) return;
+      const newStats = [...stats, {
+          subject: subjectInput,
+          totalHours: 0,
+          chaptersCompleted: 0,
+          totalChapters: parseInt(chapterInput) || 10,
+          weakAreas: []
+      }];
+      saveStats(newStats);
+      setSubjectInput('');
+      setChapterInput('');
+  };
+
+  const incrementHours = (idx: number) => {
+      const newStats = [...stats];
+      newStats[idx].totalHours += 1;
+      saveStats(newStats);
+  };
+
+  const incrementChapters = (idx: number) => {
+      const newStats = [...stats];
+      if (newStats[idx].chaptersCompleted < newStats[idx].totalChapters) {
+          newStats[idx].chaptersCompleted += 1;
+          saveStats(newStats);
+      }
+  };
+
+  const analyze = async () => {
+      setAnalyzing(true);
+      const res = await GeminiService.analyzeProgress(stats);
+      setAnalysis(res);
+      setAnalyzing(false);
+  };
+
+  return (
+    <div className="p-4 space-y-6 pb-20">
+      {/* Add Subject Section */}
+      <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700">
+          <h3 className="font-bold text-lg mb-4">Add New Subject</h3>
+          <div className="flex flex-col md:flex-row gap-3">
+              <Input value={subjectInput} onChange={(e: any) => setSubjectInput(e.target.value)} placeholder="Subject Name (e.g. Physics)" />
+              <Input type="number" value={chapterInput} onChange={(e: any) => setChapterInput(e.target.value)} placeholder="Total Chapters" />
+              <Button onClick={addSubject} disabled={!subjectInput}>Add</Button>
+          </div>
+      </div>
+
+      {/* Progress Grid */}
+      <div className="grid gap-4 md:grid-cols-2">
+         {stats.map((s, idx) => (
+             <div key={idx} className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 relative overflow-hidden">
+                 <div className="absolute top-0 left-0 w-2 h-full bg-indigo-500"></div>
+                 <div className="flex justify-between items-start mb-4 pl-4">
+                     <div>
+                         <h3 className="font-bold text-xl">{s.subject}</h3>
+                         <span className="text-xs text-gray-500 uppercase tracking-wider">Progress Tracker</span>
+                     </div>
+                     <div className="text-right">
+                         <div className="text-2xl font-bold text-indigo-600">{Math.round((s.chaptersCompleted / s.totalChapters) * 100)}%</div>
+                     </div>
+                 </div>
+
+                 <div className="pl-4 space-y-4">
+                    {/* Hours */}
+                    <div className="flex justify-between items-center">
+                        <span className="text-gray-600 dark:text-gray-400">Time Studied:</span>
+                        <div className="flex items-center gap-3">
+                            <span className="font-mono font-bold">{s.totalHours} hrs</span>
+                            <button onClick={() => incrementHours(idx)} className="w-8 h-8 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 flex items-center justify-center hover:bg-indigo-100">+</button>
+                        </div>
+                    </div>
+
+                    {/* Chapters */}
+                    <div className="flex justify-between items-center">
+                        <span className="text-gray-600 dark:text-gray-400">Chapters:</span>
+                        <div className="flex items-center gap-3">
+                             <span className="font-mono font-bold">{s.chaptersCompleted}/{s.totalChapters}</span>
+                             <button onClick={() => incrementChapters(idx)} className="w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 flex items-center justify-center hover:bg-emerald-100">+</button>
+                        </div>
+                    </div>
+
+                    {/* Bar */}
+                    <div className="w-full bg-gray-100 dark:bg-slate-700 rounded-full h-2 mt-2">
+                        <div className="bg-indigo-500 h-2 rounded-full transition-all duration-500" style={{width: `${(s.chaptersCompleted/s.totalChapters)*100}%`}}></div>
+                    </div>
+                 </div>
+             </div>
+         ))}
+      </div>
+
+      {/* Analysis Section */}
+      {stats.length > 0 && (
+          <div className="mt-8">
+              <Button onClick={analyze} disabled={analyzing} className="w-full mb-4">
+                  {analyzing ? <Loader /> : 'Analyze Progress with AI'}
+              </Button>
+              {analysis && (
+                  <div className="bg-indigo-50 dark:bg-slate-800/80 p-6 rounded-2xl border border-indigo-100 dark:border-slate-700 animate-fade-in">
+                      <h3 className="font-bold text-lg text-indigo-800 dark:text-indigo-300 mb-3">AI Insights</h3>
+                      <p className="whitespace-pre-wrap text-slate-700 dark:text-slate-300">{analysis}</p>
+                  </div>
+              )}
+          </div>
+      )}
+    </div>
+  );
+};
+
 const LibraryView = ({ onLoadChat }: { onLoadChat: (item: SavedItem) => void }) => {
   const [items, setItems] = useState<SavedItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -761,6 +903,7 @@ export default function App() {
       case 'quiz': return <QuizView />;
       case 'homework': return <HomeworkView />;
       case 'formula': return <FormulaView />;
+      case 'tracker': return <TrackerView />;
       case 'saved': return <LibraryView onLoadChat={handleLoadChat} />;
       default: return <HomeView onChangeView={changeView} userName={userName} />;
     }
@@ -787,6 +930,7 @@ export default function App() {
             { id: 'notes', label: 'Notes', icon: <Icons.Note /> },
             { id: 'flashcards', label: 'Flashcards', icon: <Icons.Card /> },
             { id: 'quiz', label: 'Quiz', icon: <Icons.Quiz /> },
+            { id: 'tracker', label: 'Tracker', icon: <Icons.Tracker /> },
             { id: 'formula', label: 'Formulas', icon: <Icons.Formula /> },
             { id: 'tutor', label: 'Tutor', icon: <Icons.Tutor /> },
             { id: 'homework', label: 'Homework', icon: <Icons.Homework /> },
@@ -831,7 +975,7 @@ export default function App() {
                 <button onClick={() => setMobileMenuOpen(false)}><Icons.Close /></button>
              </div>
              <nav className="space-y-2">
-               {['home', 'doubt', 'notes', 'flashcards', 'quiz', 'formula', 'tutor', 'homework', 'saved'].map((v) => (
+               {['home', 'doubt', 'notes', 'flashcards', 'quiz', 'tracker', 'formula', 'tutor', 'homework', 'saved'].map((v) => (
                  <button 
                    key={v}
                    onClick={() => { changeView(v as View); setMobileMenuOpen(false); }}
