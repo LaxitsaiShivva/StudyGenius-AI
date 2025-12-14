@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { View, SavedItem, ChatMessage, TutorPersona, User, QuizQuestion, SubjectProgress, FormulaItem } from './types';
 import { TUTORS, MOTIVATIONAL_QUOTES } from './constants';
 import * as GeminiService from './services/geminiService';
@@ -153,7 +153,7 @@ const AuthView = () => {
 // --- Feature Views ---
 
 const HomeView = ({ onChangeView, userName }: { onChangeView: (v: View) => void, userName: string }) => {
-  const quote = MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)];
+  const quote = useMemo(() => MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)], []);
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -621,8 +621,12 @@ const TrackerView = () => {
 
   const fetchStats = async () => {
       // Try local storage first for immediate render
-      const local = localStorage.getItem('user_stats');
-      if (local) setStats(JSON.parse(local));
+      try {
+          const local = localStorage.getItem('user_stats');
+          if (local) setStats(JSON.parse(local));
+      } catch (e) {
+          console.error("Local stats parse error", e);
+      }
       
       // Then sync with DB (if available)
       const dbStats = await StorageService.fetchUserStats();
@@ -654,17 +658,19 @@ const TrackerView = () => {
   };
 
   const incrementHours = (idx: number) => {
-      const newStats = [...stats];
-      newStats[idx].totalHours += 1;
+      const newStats = stats.map((s, i) => 
+          i === idx ? { ...s, totalHours: s.totalHours + 1 } : s
+      );
       saveStats(newStats);
   };
 
   const incrementChapters = (idx: number) => {
-      const newStats = [...stats];
-      if (newStats[idx].chaptersCompleted < newStats[idx].totalChapters) {
-          newStats[idx].chaptersCompleted += 1;
-          saveStats(newStats);
-      }
+      const newStats = stats.map((s, i) => 
+          i === idx && s.chaptersCompleted < s.totalChapters
+            ? { ...s, chaptersCompleted: s.chaptersCompleted + 1 } 
+            : s
+      );
+      saveStats(newStats);
   };
 
   const analyze = async () => {

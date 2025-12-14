@@ -13,6 +13,38 @@ const getAi = (): GoogleGenAI => {
   return aiInstance;
 };
 
+// Helper to clean markdown JSON
+const cleanJSON = (text: string) => {
+  if (!text) return "";
+  
+  // Locate the first { or [
+  const firstBrace = text.indexOf('{');
+  const firstBracket = text.indexOf('[');
+  
+  let start = -1;
+  // If both exist, pick the earlier one
+  if (firstBrace !== -1 && firstBracket !== -1) start = Math.min(firstBrace, firstBracket);
+  else if (firstBrace !== -1) start = firstBrace;
+  else if (firstBracket !== -1) start = firstBracket;
+
+  if (start === -1) return text.trim();
+
+  // Determine matching closing character based on start
+  const isObject = text[start] === '{';
+  const end = text.lastIndexOf(isObject ? '}' : ']');
+
+  if (end !== -1 && end > start) {
+      return text.substring(start, end + 1);
+  }
+  
+  // Fallback cleanup if structure detection fails
+  let cleaned = text.trim();
+  if (cleaned.includes("```")) {
+    cleaned = cleaned.replace(/```(?:json)?/g, "").replace(/```/g, "").trim();
+  }
+  return cleaned;
+};
+
 // Audio Helper Functions
 function decode(base64: string) {
   const binaryString = atob(base64);
@@ -115,7 +147,7 @@ export const generateFlashcards = async (topic: string): Promise<any[]> => {
         },
       },
     });
-    const jsonStr = response.text || "[]";
+    const jsonStr = cleanJSON(response.text || "[]");
     return JSON.parse(jsonStr);
   } catch (error) {
     console.error("Gemini Flashcard Error:", error);
@@ -153,7 +185,7 @@ export const generateQuiz = async (topic: string): Promise<any[]> => {
         },
       },
     });
-    const jsonStr = response.text || "[]";
+    const jsonStr = cleanJSON(response.text || "[]");
     return JSON.parse(jsonStr);
   } catch (error) {
     console.error("Gemini Quiz Error:", error);
@@ -180,7 +212,7 @@ export const generateNotes = async (topic: string): Promise<any> => {
         },
       },
     });
-    const jsonStr = response.text || "{}";
+    const jsonStr = cleanJSON(response.text || "{}");
     return JSON.parse(jsonStr);
   } catch (error) {
     console.error("Gemini Notes Error:", error);
@@ -207,7 +239,8 @@ export const generateEssayFeedback = async (essay: string): Promise<any> => {
                 }
             }
         });
-        return JSON.parse(response.text || "{}");
+        const jsonStr = cleanJSON(response.text || "{}");
+        return JSON.parse(jsonStr);
     } catch (e) {
         console.error("Essay Grading Error", e);
         return null;
@@ -293,7 +326,8 @@ export const generateFormulas = async (subject: string): Promise<any[]> => {
         }
       }
     });
-    return JSON.parse(response.text || "[]");
+    const jsonStr = cleanJSON(response.text || "[]");
+    return JSON.parse(jsonStr);
   } catch (e) {
     return [];
   }
@@ -386,8 +420,11 @@ export const generateSpeech = async (text: string): Promise<AudioBuffer | null> 
   }
 };
 
-export const playAudioBuffer = (buffer: AudioBuffer) => {
+export const playAudioBuffer = async (buffer: AudioBuffer) => {
    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({sampleRate: 24000});
+   if (audioContext.state === 'suspended') {
+     await audioContext.resume();
+   }
    const source = audioContext.createBufferSource();
    source.buffer = buffer;
    // Set playback rate to 1.5x for faster speech
